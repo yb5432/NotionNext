@@ -10,7 +10,9 @@ import { Style } from './style'
 import replaceSearchResult from '@/components/Mark'
 import dynamic from 'next/dynamic'
 import NotionPage from '@/components/NotionPage'
-import AlgoliaSearchModal from '@/components/AlgoliaSearchModal'
+import { useRouter } from 'next/router'
+
+const AlgoliaSearchModal = dynamic(() => import('@/components/AlgoliaSearchModal'), { ssr: false })
 
 // 主题组件
 const BlogListScroll = dynamic(() => import('./components/BlogListScroll'), { ssr: false });
@@ -29,6 +31,7 @@ const Footer = dynamic(() => import('./components/Footer'), { ssr: false });
 const SearchInput = dynamic(() => import('./components/SearchInput'), { ssr: false });
 const WWAds = dynamic(() => import('@/components/WWAds'), { ssr: false });
 const BlogListPage = dynamic(() => import('./components/BlogListPage'), { ssr: false })
+const RecommendPosts = dynamic(() => import('./components/RecommendPosts'), { ssr: false })
 
 // 主题全局状态
 const ThemeGlobalSimple = createContext()
@@ -173,7 +176,7 @@ const LayoutArchive = props => {
  * @returns
  */
 const LayoutSlug = props => {
-  const { post, lock, validPassword, prev, next } = props
+  const { post, lock, validPassword, prev, next, recommendPosts } = props
   const { fullWidth } = useGlobal()
 
   return (
@@ -199,7 +202,10 @@ const LayoutSlug = props => {
                 {/* 广告嵌入 */}
                 <AdSlot type={'in-article'} />
 
-                {post?.type === 'Post' && <ArticleAround prev={prev} next={next} />}
+                {post?.type === 'Post' && <>
+                <ArticleAround prev={prev} next={next} />
+                <RecommendPosts recommendPosts={recommendPosts}/>
+                </>}
 
                 {/* 评论区 */}
                 <Comment frontMatter={post} />
@@ -216,6 +222,23 @@ const LayoutSlug = props => {
  * @returns
  */
 const Layout404 = (props) => {
+  const { post } = props
+  const router = useRouter()
+  useEffect(() => {
+    // 404
+    if (!post) {
+      setTimeout(() => {
+        if (isBrowser) {
+          const article = document.getElementById('notion-article')
+          if (!article) {
+            router.push('/404').then(() => {
+              console.warn('找不到页面', router.asPath)
+            })
+          }
+        }
+      }, siteConfig('POST_WAITING_TIME_FOR_404') * 1000)
+    }
+  }, [post])
   return <>
         404 Not found.
     </>
